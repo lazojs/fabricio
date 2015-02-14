@@ -19,5 +19,5 @@ var data = {
 };
 
 fabricio(data, null, function (err, results) {
-    console.log(err || results[0].dependencies.moment.module);
+    console.log(err || results[0].dependencies.moment);
 });
