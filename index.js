@@ -64,7 +64,7 @@ module.exports = function (lazoModules, options, callback) {
             var lazoModule = lazoModules[j];
 
             if (lazoModule.lazo && lazoModule.lazo.dependencies) {
-                var dependencies = _.clone(lazoModule.lazo.dependencies);
+                var dependencies = _.cloneDeep(lazoModule.lazo.dependencies);
                 for (var k in dependencies) {
                     (function (k) {
                         tasks.push(function (callback) {
@@ -77,6 +77,7 @@ module.exports = function (lazoModules, options, callback) {
 
                                 modules.push(_.extend({
                                     dependencies: options.resolveModules(dependencies, filteredModules, filteredConflicts, options),
+                                    name: j
                                 }, lazoModule));
 
                                 callback(null, modules);
@@ -88,11 +89,13 @@ module.exports = function (lazoModules, options, callback) {
         })(j);
     }
 
-    async.parallel(tasks, function (err, result) {
+    async.parallel(tasks, function (err, results) {
         if (err) {
             return callback(err, null);
         }
-;
-        callback(null, modules);
+
+        callback(null, _.uniq(modules, function (module) {
+            return module.name;
+        }));
     });
 };

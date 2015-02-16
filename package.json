@@ -1,7 +1,7 @@
 {
   "name": "fabricio",
   "description": "Resolves Lazo node module dependencies that are not Lazo application packages based on package.json lazo meta data.",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "main": "index.js",
   "keywords": [
     "lazojs",
