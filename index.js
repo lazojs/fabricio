@@ -46,8 +46,14 @@ var defaults = {
     },
     resolveModules: function (dependencies, modules, conflicts, options) {
         for (var k in dependencies) {
-            dependencies[k].module = options.versionResolver(k, modules, conflicts[k]);
-            dependencies[k].conflicts = conflicts[k];
+            var module = options.versionResolver(k, modules, conflicts[k]);
+            var moduleConflicts = conflicts[k];
+
+            dependencies[k] = dependencies[k].map(function (dependency) {
+                dependency.module = module;
+                dependency.conflicts = moduleConflicts;
+                return dependency;
+            });
         }
 
         return dependencies;

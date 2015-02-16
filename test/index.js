@@ -8,10 +8,10 @@ var data = {
         lazo: {
             component: true,
             dependencies: {
-                moment: {
+                moment: [{
                     moduleId: 'moment',
                     install: 'common'
-                }
+                }]
             }
         },
         data: {},
@@ -22,14 +22,14 @@ var data = {
         lazo: {
             component: true,
             dependencies: {
-                moment: {
+                moment: [{
                     moduleId: 'moment',
                     install: 'common'
-                },
-                jquery: {
+                }],
+                jquery: [{
                     moduleId: 'jquery',
                     install: 'common'
-                }
+                }]
             }
         },
         data: {},
@@ -48,14 +48,14 @@ describe('fabricio', function () {
             chai.expect(results.length).to.equal(2);
 
             var fooModule = results[0];
-            var fooMomentDep = fooModule.dependencies.moment;
+            var fooMomentDep = fooModule.dependencies.moment[0];
             chai.expect(fooMomentDep.moduleId).to.be.equal('moment');
             chai.expect(fooMomentDep.conflicts.length).to.equal(2);
             chai.expect(fooMomentDep.module.version).to.equal('2.0.0');
 
             var barModule = results[1];
-            var barMomentDep = barModule.dependencies.moment;
-            var barJqueryDep = barModule.dependencies.jquery;
+            var barMomentDep = barModule.dependencies.moment[0];
+            var barJqueryDep = barModule.dependencies.jquery[0];
             chai.expect(barMomentDep.moduleId).to.be.equal('moment');
             chai.expect(barMomentDep.conflicts.length).to.equal(2);
             chai.expect(barMomentDep.module.version).to.equal('2.0.0');
