@@ -1,3 +1,4 @@
+var fs = require('fs');
 var path = require('path');
 var async = require('async');
 var _ = require('lodash');
@@ -44,21 +45,86 @@ var defaults = {
             });
         }
     },
-    resolveModules: function (dependencies, modules, conflicts, options) {
-        for (var k in dependencies) {
-            var module = options.versionResolver(k, modules, conflicts[k]);
-            var moduleConflicts = conflicts[k];
+    resolveModules: function (parentModule, dependencies, modules, conflicts, options, callback) {
+        var tasks = [];
 
-            dependencies[k] = dependencies[k].map(function (dependency) {
-                dependency.module = module;
-                dependency.conflicts = moduleConflicts;
-                return dependency;
-            });
+        for (var k in dependencies) {
+            (function (k) {
+                tasks.push(function (callback) {
+                    var module = options.versionResolver(k, modules, conflicts[k]);
+                    var moduleConflicts = conflicts[k];
+
+                    if (!module) {
+                        resolveModule(parentModule.path, k, function (err, module) {
+                            if (err) {
+                                return callback(err, null);
+                            }
+
+                            dependencies[k] = dependencies[k].map(function (dependency) {
+                                dependency.module = module;
+                                dependency.conflicts = moduleConflicts;
+                                return dependency;
+                            });
+
+                            callback(null, module);
+                        });
+                    } else {
+                        dependencies[k] = dependencies[k].map(function (dependency) {
+                            dependency.module = module;
+                            dependency.conflicts = moduleConflicts;
+                            return dependency;
+                        });
+
+                        callback(null, module);
+                    }
+                });
+            })(k);
         }
 
-        return dependencies;
+        async.parallel(tasks, function (err, results) {
+            if (err) {
+                return callback(err, null);
+            }
+
+            callback(null, dependencies);
+        });
     }
 };
+
+function resolveModule(modulePath, moduleName, callback) {
+    var modulePathParts = modulePath.split(path.sep);
+
+    if (!modulePathParts.length) {
+        return callback(new Error('fabricio: Unable to resolve module ' + moduleName), null);
+    }
+
+    if (modulePathParts[modulePathParts.length - 1] !== 'node_modules') {
+        modulePathParts.pop();
+        return resolveModule(modulePathParts.join(path.sep), moduleName, callback);
+    }
+
+    var resolvedModulePath = path.join(modulePathParts.join(path.sep), moduleName);
+    if (fs.existsSync(resolvedModulePath)) {
+        var retVal = {
+            name: moduleName,
+            lazo: undefined,
+            path: resolvedModulePath
+        };
+        fs.readFile(path.join(resolvedModulePath, 'package.json'), function (err, packageJson){
+            try {
+                packageJson = JSON.parse(packageJson);
+                retVal.data = packageJson;
+            } catch (e) {
+                return callback(err, null);
+            }
+
+            return callback(null, retVal);
+        });
+    } else {
+        modulePathParts.pop();
+        return resolveModule(modulePathParts.join(path.sep), moduleName, callback);
+    }
+}
 
 module.exports = function (lazoModules, options, callback) {
     options = _.defaults(options || {}, defaults);
@@ -78,15 +144,20 @@ module.exports = function (lazoModules, options, callback) {
                                 if (err) {
                                     return callback(err, null);
                                 }
+
                                 var filteredModules = options.filterModules(results.modules, dependencies);
                                 var filteredConflicts = options.filterConflicts(results.conflicts, dependencies);
+                                options.resolveModules(lazoModule, dependencies, filteredModules, filteredConflicts, options, function (err, resolvedModules) {
+                                    if (err) {
+                                        return callback(err, null);
+                                    }
+                                    modules.push(_.extend({
+                                        dependencies: resolvedModules,
+                                        name: j
+                                    }, lazoModule));
 
-                                modules.push(_.extend({
-                                    dependencies: options.resolveModules(dependencies, filteredModules, filteredConflicts, options),
-                                    name: j
-                                }, lazoModule));
-
-                                callback(null, modules);
+                                    callback(null, modules);
+                                });
                             });
                         });
                     })(k);
