@@ -16,8 +16,8 @@ Resolves Lazo node module dependencies that are not Lazo application packages ba
         "dependencies": {
             "moment": [{
                 "install": "common", // install location; app/moment/index.js
-                "moduleId": "moment", // optional; module id for rjs conf
-                "shim": {}, // optional; rjs shim
+                "moduleId": "moment", // optional; module id for rjs conf; in this case it would map to app/moment/index
+                "conf": {}, // optional; rjs conf to be merged with app dist
                 "main": "index" // optional; module main; default is package.json main
             }]
         }
