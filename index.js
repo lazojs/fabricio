@@ -162,6 +162,11 @@ module.exports = function (lazoModules, options, callback) {
                         });
                     })(k);
                 }
+            } else {
+                modules.push(_.extend({
+                    dependencies: undefined,
+                    name: j
+                }, lazoModule));
             }
         })(j);
     }
