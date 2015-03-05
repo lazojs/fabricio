@@ -8,23 +8,35 @@ var defaults = {
     includeResolver: function (packageJson) {
         return !packageJson.lazo;
     },
-    filterModules: function (modules, dependencies) {
+    filterModules: function (modules, dependencies, lazoModules) {
         return modules.filter(function (module) {
             return dependencies[module.name];
+        }).filter(function (module) {
+            var parent = getParentModule(module.path, modules);
+            // if !parent then module is the source
+            return !parent || parent.lazo;
         });
     },
-    filterConflicts: function (conflicts, dependencies) {
+    filterConflicts: function (conflicts, dependencies, modules, lazoModules) {
         var retVal = {};
         for (var k in dependencies) {
             if (conflicts[k]) {
-                retVal[k] = conflicts[k];
+                retVal[k] = conflicts[k].filter(function (module) {
+                    var parent = getParentModule(module.path, modules);
+                    // if !parent then module is the source
+                    return !parent || parent.lazo;
+                });
+
+                if (retVal[k].length === 1) {
+                    retVal[k] = [];
+                }
             }
         }
 
         return retVal;
     },
     versionResolver: function (name, modules, conflicts) {
-        if (conflicts) {
+        if (conflicts && conflicts.length) {
             conflicts = conflicts.slice(0);
             conflicts.sort(function (a, b) {
                 if (semver.lt(a.version, b.version)) {
@@ -91,6 +103,25 @@ var defaults = {
     }
 };
 
+function getParentModule(modulePath, modules) {
+    var pathParts = modulePath.split(path.sep);
+    // -1 remove module from path
+    var len = pathParts.length - 1;
+    var parentModule;
+
+    for (var i = len; i > 0; i--) {
+        if (pathParts[i] !== 'node_modules') {
+            // do not include current module name
+            parentModule = pathParts.slice(0, i - 1).join(path.sep);
+            break;
+        }
+    }
+
+    return modules.filter(function (module) {
+        return module.path === parentModule;
+    })[0];
+}
+
 function resolveModule(modulePath, moduleName, callback) {
     var modulePathParts = modulePath.split(path.sep);
 
@@ -145,8 +176,8 @@ module.exports = function (lazoModules, options, callback) {
                                     return callback(err, null);
                                 }
 
-                                var filteredModules = options.filterModules(results.modules, dependencies);
-                                var filteredConflicts = options.filterConflicts(results.conflicts, dependencies);
+                                var filteredModules = options.filterModules(results.modules, dependencies, lazoModules);
+                                var filteredConflicts = options.filterConflicts(results.conflicts, dependencies, results.modules, lazoModules);
                                 options.resolveModules(lazoModule, dependencies, filteredModules, filteredConflicts, options, function (err, resolvedModules) {
                                     if (err) {
                                         return callback(err, null);
