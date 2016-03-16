@@ -5,6 +5,7 @@ var _ = require('lodash');
 var gammabot = require('gammabot');
 var semver = require('semver');
 var defaults = {
+    excludeDir: /test/,
     includeResolver: function (packageJson) {
         return !packageJson.lazo;
     },
@@ -171,7 +172,7 @@ module.exports = function (lazoModules, options, callback) {
                 for (var k in dependencies) {
                     (function (k) {
                         tasks.push(function (callback) {
-                            gammabot(path.join(lazoModule.path, 'node_modules'), { includeResolver: options.includeResolver }, function (err, results) {
+                            gammabot(path.join(lazoModule.path, 'node_modules'), _.pick(options, ['includeResolver', 'excludeDir']), function (err, results) {
                                 if (err) {
                                     return callback(err, null);
                                 }
